@@ -6,8 +6,7 @@ import (
 )
 
 func init() {
-	registerDecoder("UTF-8", NewUTF8Decoder)
-	registerEncoder("UTF-8", NewUTF8Encoder)
+	registerCodec("UTF-8", NewUTF8Decoder, NewUTF8Encoder)
 }
 
 var _ Decoder = &UTF8Decoder{}

@@ -17,60 +17,50 @@ type Encoder interface {
 	Encode(io.Writer, rune) error
 }
 
+type registeredCodec struct {
+	initDecoder func() Decoder
+	initEncoder func() Encoder
+}
+
 var (
-	decoderRegistryMu sync.RWMutex
-	decoderRegistry   map[string]func() Decoder
+	codecRegistryMu sync.RWMutex
+	codecRegistry   = map[string]registeredCodec{}
 )
 
-func registerDecoder(name string, init func() Decoder) {
-	decoderRegistryMu.Lock()
-	defer decoderRegistryMu.Unlock()
+func registerCodec(name string, initDecoder func() Decoder, initEncoder func() Encoder) {
+	codecRegistryMu.Lock()
+	defer codecRegistryMu.Unlock()
 
-	if decoderRegistry == nil {
-		decoderRegistry = map[string]func() Decoder{}
+	codecRegistry[name] = registeredCodec{
+		initDecoder: initDecoder,
+		initEncoder: initEncoder,
 	}
-	decoderRegistry[name] = init
 }
 
 // GetDecoder looks up a decoder by name. Returns nil if no decoder is found
 // with the given name.
 func GetDecoder(name string) Decoder {
-	decoderRegistryMu.RLock()
-	defer decoderRegistryMu.RUnlock()
+	codecRegistryMu.RLock()
+	defer codecRegistryMu.RUnlock()
 
-	init, ok := decoderRegistry[name]
+	cr, ok := codecRegistry[name]
 	if !ok {
 		return nil
 	}
-	return init()
-}
-
-var (
-	encoderRegistryMu sync.RWMutex
-	encoderRegistry   map[string]func() Encoder
-)
-
-func registerEncoder(name string, init func() Encoder) {
-	encoderRegistryMu.Lock()
-	defer encoderRegistryMu.Unlock()
-
-	if encoderRegistry == nil {
-		encoderRegistry = map[string]func() Encoder{}
-	}
-	encoderRegistry[name] = init
+	return cr.initDecoder()
 }
 
 // GetEncoder looks up an encoder by name. Returns nil if no encoder is found
 // with the given name.
 func GetEncoder(name string) Encoder {
-	encoderRegistryMu.RLock()
-	defer encoderRegistryMu.RUnlock()
+	codecRegistryMu.RLock()
+	defer codecRegistryMu.RUnlock()
 
-	init, ok := encoderRegistry[name]
+	cr, ok := codecRegistry[name]
 	if !ok {
 		return nil
 	}
-	return init()
+	return cr.initEncoder()
 }
 
 // Recode decodes data from the reader with decoder, then writes it back out to
