@@ -8,27 +8,23 @@ import (
 func TestUTF8Decode(t *testing.T) {
 	cases := []struct {
 		buf []byte
-		xp  []byte
+		xp  rune
 	}{
 		{
 			buf: []byte{'x', 0x0a},
-			xp:  []byte{'x'},
+			xp:  'x',
 		},
 		{
 			buf: []byte{0xd8, 0x89, 0xa},
-			xp:  []byte{0xd8, 0x89},
-		},
-		{
-			buf: []byte{0xd8, 0x89, 0xa},
-			xp:  []byte{0xd8, 0x89},
+			xp:  '؉',
 		},
 		{
 			buf: []byte{0xe2, 0x82, 0xa1, 0xa},
-			xp:  []byte{0xe2, 0x82, 0xa1},
+			xp:  '₡',
 		},
 		{
 			buf: []byte{0xf0, 0x9f, 0x8c, 0x8e, 0x0a},
-			xp:  []byte{0xf0, 0x9f, 0x8c, 0x8e},
+			xp:  '🌎',
 		},
 	}
 
@@ -44,6 +40,45 @@ func TestUTF8Decode(t *testing.T) {
 
 		if string(actual) != string(c.xp) {
 			t.Errorf("got %q, want %q", string(actual), string(c.xp))
+		}
+	}
+}
+
+func TestUTF8Encoder(t *testing.T) {
+	cases := []struct {
+		r        rune
+		expected []byte
+	}{
+		{
+			r:        'x',
+			expected: []byte{'x'},
+		},
+		{
+			r:        '؉',
+			expected: []byte{0xd8, 0x89},
+		},
+		{
+			r:        '₡',
+			expected: []byte{0xe2, 0x82, 0xa1},
+		},
+		{
+			r:        '🌎',
+			expected: []byte{0xf0, 0x9f, 0x8c, 0x8e},
+		},
+	}
+
+	encoder := GetEncoder("UTF-8")
+
+	for _, c := range cases {
+		actual := &bytes.Buffer{}
+		err := encoder.Encode(actual, c.r)
+		if err != nil {
+			t.Errorf("error: %v", err)
+			continue
+		}
+
+		if actual.String() != string(c.expected) {
+			t.Errorf("got %q, want %q", actual.String(), string(c.expected))
 		}
 	}
 }

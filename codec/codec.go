@@ -1,19 +1,20 @@
 package codec
 
 import (
+	"bufio"
+	"fmt"
 	"io"
 	"sync"
 )
 
-// Decoder reads a single character and converts it to UTF-8.
+// Decoder reads a single character and returns the Unicode code point as a rune.
 type Decoder interface {
-	Decode(io.ByteReader) ([]byte, error)
+	Decode(io.ByteReader) (rune, error)
 }
 
-// Encoder converts a character from UTF-8 to some other format and writes it
-// to the io.Writer.
+// Encoder writes an encoded Unicode code point to the writer.
 type Encoder interface {
-	Encode(io.Writer, []byte) error
+	Encode(io.Writer, rune) error
 }
 
 var (
@@ -70,4 +71,36 @@ func GetEncoder(name string) Encoder {
 		return nil
 	}
 	return init()
+}
+
+// Recode decodes data from the reader with decoder, then writes it back out to
+// w with the encoder.
+func Recode(r io.Reader, w io.Writer, decoder Decoder, encoder Encoder) error {
+	br, ok := r.(io.ByteReader)
+	if !ok {
+		br = bufio.NewReader(r)
+	}
+
+	bw, ok := w.(*bufio.Writer)
+	if !ok {
+		bw = bufio.NewWriter(w)
+		defer bw.Flush()
+	}
+
+	for {
+		char, err := decoder.Decode(br)
+		if err != nil {
+			if err != io.EOF {
+				return fmt.Errorf("error decoding character: %w", err)
+			}
+			break
+		}
+
+		err = encoder.Encode(bw, char)
+		if err != nil {
+			return fmt.Errorf("error encoding character: %w", err)
+		}
+	}
+
+	return nil
 }
