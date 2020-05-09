@@ -6,12 +6,12 @@ import (
 )
 
 func init() {
-	registerCodec("UCS-2", NewUCS2Decoder, NewUCS2LEEncoder)
+	registerCodec("UCS-2", NewUCS2Decoder, NewUCS2Encoder)
 	registerCodec("UCS-2BE", NewUCS2BEDecoder, NewUCS2BEEncoder)
 	registerCodec("UCS-2LE", NewUCS2LEDecoder, NewUCS2LEEncoder)
 }
 
-// UCS2Decoder reads UCS-2 character. UCS-2 is a character encoding where each
+// UCS2Decoder reads UCS-2 characters. UCS-2 is a character encoding where each
 // code point takes exactly 2 bytes. It can only encode characters up to
 // U+FFFF.
 type UCS2Decoder struct {
@@ -81,7 +81,18 @@ type UCS2Encoder struct {
 	writeBOM  bool
 }
 
-// NewUCS2LEEncoder returns a UCS-2 decoder with a little-endian byte order.
+// NewUCS2Encoder returns a UCS-2 encoder with a little-endian byte order.
+//
+// This is identical to NewUCS2LEEncoder except this one does not write a byte
+// order mark.
+func NewUCS2Encoder() Encoder {
+	return &UCS2Encoder{
+		byteOrder: littleEndian,
+		writeBOM:  false,
+	}
+}
+
+// NewUCS2LEEncoder returns a UCS-2 encoder with a little-endian byte order.
 //
 // It will write a byte order mark with the first character.
 func NewUCS2LEEncoder() Encoder {
@@ -91,7 +102,7 @@ func NewUCS2LEEncoder() Encoder {
 	}
 }
 
-// NewUCS2BEEncoder returns a UCS-2 decoder with a big-endian byte order.
+// NewUCS2BEEncoder returns a UCS-2 encoder with a big-endian byte order.
 //
 // It will write a byte order mark with the first character.
 func NewUCS2BEEncoder() Encoder {
@@ -101,7 +112,7 @@ func NewUCS2BEEncoder() Encoder {
 	}
 }
 
-// Decode satifies the Encoder interface for UCS-2.
+// Encode satifies the Encoder interface for UCS-2.
 func (d *UCS2Encoder) Encode(w io.Writer, r rune) error {
 	if r > 0xffff {
 		return errors.New("character out of range")
