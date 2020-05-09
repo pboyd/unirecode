@@ -13,42 +13,41 @@ var _ Decoder = &UTF8Decoder{}
 
 // UTF8Decoder implements Decoder for UTF-8.
 type UTF8Decoder struct {
-	buf []byte
 }
 
 // NewUTF8Decoder creates a new instance of UTF8Decoder
 func NewUTF8Decoder() Decoder {
-	return &UTF8Decoder{
-		buf: make([]byte, 0, 4),
-	}
+	return &UTF8Decoder{}
 }
 
 // Decode satifies the Decoder interface for UTF-8.
-func (d *UTF8Decoder) Decode(br io.ByteReader) (rune, error) {
-	b, err := br.ReadByte()
+func (d *UTF8Decoder) Decode(r io.Reader) (rune, error) {
+	buf := make([]byte, 1, 4)
+	_, err := io.ReadFull(r, buf)
 	if err != nil {
 		return 0, err
 	}
 
-	l := utf8Len(b)
+	l := utf8Len(buf[0])
 	if l <= 0 || l > 4 {
 		return 0, errors.New("invalid character")
 	}
 	if l == 1 {
-		return rune(b), nil
+		return rune(buf[0]), nil
 	}
 
 	// 2 byte characters have three bits for the length, so use the 5 low bits.
 	// 3 byte character, use the low 4 bits.
 	// 4 byte character, use the low 3 bits.
-	r := rune(b) & (0x7f >> l)
+	char := rune(buf[0]) & (0x7f >> l)
 
-	for i := 1; i < l; i++ {
-		b, err = br.ReadByte()
-		if err != nil {
-			return 0, err
-		}
+	buf = buf[:l]
+	_, err = io.ReadFull(r, buf[1:])
+	if err != nil {
+		return 0, err
+	}
 
+	for _, b := range buf[1:] {
 		// Make sure the two high bits are 1 and 0 respectively.
 		if b>>6 != 2 {
 			return 0, errors.New("invalid character")
@@ -56,13 +55,13 @@ func (d *UTF8Decoder) Decode(br io.ByteReader) (rune, error) {
 
 		// There are 6 bits of the code point in this byte. So shift the
 		// everything we've gotten so far to make room.
-		r <<= 6
+		char <<= 6
 
-		// Put the low 6 bits of b on the low 6 bits of r.
-		r |= rune(b & (0xff >> 2))
+		// Put the low 6 bits of b on the low 6 bits of char.
+		char |= rune(b & (0xff >> 2))
 	}
 
-	return r, nil
+	return char, nil
 }
 
 // utf8Len returns the number total bytes used for the UTF-8 character based on the information in the first byte.

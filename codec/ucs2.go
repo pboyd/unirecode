@@ -41,20 +41,20 @@ func NewUCS2BEDecoder() Decoder {
 }
 
 // Decode satifies the Decoder interface for UCS-2.
-func (d *UCS2Decoder) Decode(r io.ByteReader) (rune, error) {
-	var in = make([]byte, 2)
-	err := d.read(r, in)
+func (d *UCS2Decoder) Decode(r io.Reader) (rune, error) {
+	var buf = make([]byte, 2)
+	_, err := io.ReadFull(r, buf)
 	if err != nil {
 		return 0, err
 	}
 
 	if d.byteOrder == unknownByteOrder {
-		if in[0] == 0xfe && in[1] == 0xff {
+		if buf[0] == 0xfe && buf[1] == 0xff {
 			d.byteOrder = bigEndian
-			err = d.read(r, in)
-		} else if in[0] == 0xff && in[1] == 0xfe {
+			_, err = io.ReadFull(r, buf)
+		} else if buf[0] == 0xff && buf[1] == 0xfe {
 			d.byteOrder = littleEndian
-			err = d.read(r, in)
+			_, err = io.ReadFull(r, buf)
 		} else {
 			d.byteOrder = littleEndian
 		}
@@ -66,23 +66,12 @@ func (d *UCS2Decoder) Decode(r io.ByteReader) (rune, error) {
 
 	switch d.byteOrder {
 	case bigEndian:
-		return (rune(in[0]) << 8) | rune(in[1]), nil
+		return (rune(buf[0]) << 8) | rune(buf[1]), nil
 	case littleEndian:
-		return (rune(in[1]) << 8) | rune(in[0]), nil
+		return (rune(buf[1]) << 8) | rune(buf[0]), nil
 	default:
 		return 0, errors.New("unknown byte order")
 	}
-}
-
-func (d *UCS2Decoder) read(r io.ByteReader, buf []byte) error {
-	var err error
-	for i := range buf {
-		buf[i], err = r.ReadByte()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // UCS2Encoder encodes unicode code points using exactly two bytes.

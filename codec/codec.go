@@ -9,7 +9,7 @@ import (
 
 // Decoder reads a single character and returns the Unicode code point as a rune.
 type Decoder interface {
-	Decode(io.ByteReader) (rune, error)
+	Decode(r io.Reader) (rune, error)
 }
 
 // Encoder writes an encoded Unicode code point to the writer.
@@ -66,11 +66,6 @@ func GetEncoder(name string) Encoder {
 // Recode decodes data from the reader with decoder, then writes it back out to
 // w with the encoder.
 func Recode(r io.Reader, w io.Writer, decoder Decoder, encoder Encoder) error {
-	br, ok := r.(io.ByteReader)
-	if !ok {
-		br = bufio.NewReader(r)
-	}
-
 	bw, ok := w.(*bufio.Writer)
 	if !ok {
 		bw = bufio.NewWriter(w)
@@ -78,7 +73,7 @@ func Recode(r io.Reader, w io.Writer, decoder Decoder, encoder Encoder) error {
 	}
 
 	for {
-		char, err := decoder.Decode(br)
+		char, err := decoder.Decode(r)
 		if err != nil {
 			if err != io.EOF {
 				return fmt.Errorf("error decoding character: %w", err)
