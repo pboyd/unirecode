@@ -83,7 +83,7 @@ func Recode(r io.Reader, w io.Writer, decoder Decoder, encoder Encoder) error {
 
 		err = encoder.Encode(bw, char)
 		if err != nil {
-			return fmt.Errorf("error encoding character: %w", err)
+			return fmt.Errorf("error encoding character (0x%x): %w", char, err)
 		}
 	}
 
