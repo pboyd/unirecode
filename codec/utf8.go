@@ -53,8 +53,8 @@ func (d *UTF8Decoder) Decode(r io.Reader) (rune, error) {
 			return 0, errors.New("invalid character")
 		}
 
-		// There are 6 bits of the code point in this byte. So shift the
-		// everything we've gotten so far to make room.
+		// There are 6 bits of the code point in this byte. So shift
+		// everything to make room.
 		char <<= 6
 
 		// Put the low 6 bits of b on the low 6 bits of char.
