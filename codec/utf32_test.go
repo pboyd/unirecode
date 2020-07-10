@@ -93,6 +93,22 @@ func TestUTF32Decoder(t *testing.T) {
 			},
 			expected: "∠؉₡🌎",
 		},
+		{
+			decoder: NewUTF32Decoder(),
+			in: []byte{
+				0x00, 0x01, 0x01, 0x0,
+				0x48, 0x00, 0x00, 0x00,
+			},
+			expected: "\uFFFDH",
+		},
+		{
+			decoder: NewUTF32Decoder(),
+			in: []byte{
+				0x00, 0x01, 0x01, 0x0,
+				0x00, 0x00, 0x00, 0x48,
+			},
+			expected: "\uFFFDH",
+		},
 	}
 
 	encoder := NewUTF8Encoder()

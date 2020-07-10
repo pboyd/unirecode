@@ -55,7 +55,7 @@ func (d *UTF32Decoder) Decode(r io.Reader) (rune, error) {
 	if d.byteOrder == unknownByteOrder {
 		// Check for a BE or LE byte order mark.
 		//
-		// UTF-32 doesn't really need a BOM, because the most
+		// UTF-32 sometimes doesn't need a BOM, because the most
 		// significant byte is always zero (max assigned Unicode code
 		// point is 0x10ffff which never takes four bytes), so check
 		// which end is zero if there's no BOM.
@@ -65,10 +65,16 @@ func (d *UTF32Decoder) Decode(r io.Reader) (rune, error) {
 		} else if buf[0] == 0xff && buf[1] == 0xfe && buf[2] == 0 && buf[3] == 0 {
 			d.byteOrder = littleEndian
 			_, err = io.ReadFull(r, buf)
-		} else if buf[0] == 0 {
-			d.byteOrder = bigEndian
+		} else if buf[0] == 0 && buf[3] == 0 {
+			// Checking for a zero byte doesn't work when _both_
+			// end bytes are zero. Output a replacement character,
+			// and we'll probably get it right on the next code
+			// point.
+			return 0xfffd, nil
 		} else if buf[3] == 0 {
 			d.byteOrder = littleEndian
+		} else if buf[0] == 0 {
+			d.byteOrder = bigEndian
 		} else {
 			return 0, errors.New("invalid UTF-32 character")
 		}
